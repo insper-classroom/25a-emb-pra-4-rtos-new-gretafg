@@ -108,10 +108,10 @@ void oled_task(void *p){
         if (xSemaphoreTake(xSemaphoreTrigger, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (xQueueReceive(xQueueDistance, &distancia, pdMS_TO_TICKS(100))== pdTRUE) {
                 gfx_clear_buffer(&disp);
-                char dist_str[14];
                 if (distancia > 400){
                     gfx_draw_string(&disp, 0, 0, 1, "Erro");
                 } else {
+                    char dist_str[14];
                     snprintf(dist_str, sizeof(dist_str), "Dist: %.2f cm", distancia);
                     printf("%s\n", dist_str);
                     gfx_draw_string(&disp, 0, 0, 1, dist_str);

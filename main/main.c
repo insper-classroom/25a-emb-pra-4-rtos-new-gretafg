@@ -47,7 +47,7 @@ void trigger_task(void *p){
 
     while (true) {
         gpio_put(PIN_TRIGGER, 1);
-        sleep_us(10);
+        vTaskDelay(pdMS_TO_TICKS(10)); 
         gpio_put(PIN_TRIGGER, 0);
         vTaskDelay(pdMS_TO_TICKS(1000)); 
     }

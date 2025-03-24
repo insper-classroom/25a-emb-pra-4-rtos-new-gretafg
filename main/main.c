@@ -47,9 +47,9 @@ void trigger_task(void *p){
 
     while (true) {
         gpio_put(PIN_TRIGGER, 1);
-        vTaskDelay(pdMS_TO_TICKS(10)); 
+        vTaskDelay(10);
         gpio_put(PIN_TRIGGER, 0);
-        vTaskDelay(pdMS_TO_TICKS(1000)); 
+        vTaskDelay(2); 
     }
 }
 
@@ -61,7 +61,7 @@ void echo_task(void *p){
 
     int duracao = 0;
     while (true) {
-        if (xQueueReceive(xQueueTime, &duracao, portMAX_DELAY) == pdTRUE) {
+        if (xQueueReceive(xQueueTime, &duracao, pdMS_TO_TICKS(100)) == pdTRUE) {
             float distancia = (duracao * 0.0343) / 2;
             printf("Distancia: %f cm\n", distancia);
             xQueueSend(xQueueDistance, &distancia, 0);
@@ -105,16 +105,20 @@ void oled_task(void *p){
 
     float distancia = 0;
     while (true) {
-        if (xSemaphoreTake(xSemaphoreTrigger, pdMS_TO_TICKS(500)) == pdTRUE) {
+        if (xSemaphoreTake(xSemaphoreTrigger, pdMS_TO_TICKS(100)) == pdTRUE) {
             if (xQueueReceive(xQueueDistance, &distancia, pdMS_TO_TICKS(100))) {
                 gfx_clear_buffer(&disp);
-                char dist_str[20];
-                snprintf(dist_str, sizeof(dist_str), "Dist: %.2f cm", distancia);
-                printf("%s\n", dist_str);
-                gfx_draw_string(&disp, 0, 0, 1, dist_str);
-                int progresso = (int) distancia * 128 / 200;
-                gfx_draw_line(&disp, 0, 27, progresso, 27);
-                gfx_show(&disp);
+                if (distancia > 250){
+                    gfx_draw_string(&disp, 0, 0, 1, "Erro");
+                } else {
+                    char dist_str[20];
+                    snprintf(dist_str, sizeof(dist_str), "Dist: %.2f cm", distancia);
+                    printf("%s\n", dist_str);
+                    gfx_draw_string(&disp, 0, 0, 1, dist_str);
+                    int progresso = (int) distancia * 128 / 200;
+                    gfx_draw_line(&disp, 0, 27, progresso, 27);
+                    gfx_show(&disp);
+                }
             }
         }
     }

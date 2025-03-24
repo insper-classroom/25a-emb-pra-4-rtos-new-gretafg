@@ -31,12 +31,12 @@ void pin_callback(uint gpio, uint32_t events) {
     static uint32_t start_time = 0;
     uint32_t time = to_us_since_boot(get_absolute_time());
     
-    if (events == GPIO_IRQ_EDGE_RISE) { 
+    if (events == 0x8) { 
         start_time = time;
-    } else if (events == GPIO_IRQ_EDGE_FALL) {
+    } else {
         uint32_t diff = time - start_time;
         xQueueSendFromISR(xQueueTime, &diff, 0);
-        xSemaphoreGiveFromISR(xSemaphoreTrigger, NULL);  
+        xSemaphoreGiveFromISR(xSemaphoreTrigger, 0);  
     }
 }
 
@@ -47,9 +47,9 @@ void trigger_task(void *p){
 
     while (true) {
         gpio_put(PIN_TRIGGER, 1);
-        vTaskDelay(10);
+        vTaskDelay(pdMS_TO_TICKS(10)); 
         gpio_put(PIN_TRIGGER, 0);
-        vTaskDelay(2); 
+        vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
 }
 
@@ -61,7 +61,7 @@ void echo_task(void *p){
 
     int duracao = 0;
     while (true) {
-        if (xQueueReceive(xQueueTime, &duracao, pdMS_TO_TICKS(100)) == pdTRUE) {
+        if (xQueueReceive(xQueueTime, &duracao, portMAX_DELAY) == pdTRUE) {
             float distancia = (duracao * 0.0343) / 2;
             printf("Distancia: %f cm\n", distancia);
             xQueueSend(xQueueDistance, &distancia, 0);
@@ -106,20 +106,20 @@ void oled_task(void *p){
     float distancia = 0;
     while (true) {
         if (xSemaphoreTake(xSemaphoreTrigger, pdMS_TO_TICKS(100)) == pdTRUE) {
-            if (xQueueReceive(xQueueDistance, &distancia, pdMS_TO_TICKS(100))) {
+            if (xQueueReceive(xQueueDistance, &distancia, pdMS_TO_TICKS(100))== pdTRUE) {
                 gfx_clear_buffer(&disp);
-                if (distancia > 250){
+                char dist_str[20];
+                if (distancia > 400){
                     gfx_draw_string(&disp, 0, 0, 1, "Erro");
                 } else {
-                    char dist_str[20];
                     snprintf(dist_str, sizeof(dist_str), "Dist: %.2f cm", distancia);
                     printf("%s\n", dist_str);
                     gfx_draw_string(&disp, 0, 0, 1, dist_str);
                     int progresso = (int) distancia * 128 / 200;
                     gfx_draw_line(&disp, 0, 27, progresso, 27);
-                    gfx_show(&disp);
                 }
-            }
+                gfx_show(&disp);
+            } 
         }
     }
 }
